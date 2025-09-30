@@ -30,7 +30,7 @@ class NotificationService:
     async def notify_bot_started(self):
         """Уведомление о запуске бота"""
         try:
-            message = "✅ Бот успешно запущен и готов к работе!"
+            message = "✅ Бот успешно запущен и готов к работе!\nВведите команду /start для начала работы."
             await self.bot.send_message(self.admin_chat_id, message)
         except Exception as e:
             logger.error(f"Ошибка при отправке уведомления о запуске: {e}")

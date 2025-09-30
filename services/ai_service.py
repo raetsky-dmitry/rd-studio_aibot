@@ -1,8 +1,9 @@
-import re
 import logging
+import re
 from openai import AsyncOpenAI
 from settings.config import Config
 from settings.prompts import SYSTEM_PROMPT, CONTACT_EXTRACTION_PROMPT
+from services.knowledge_service import knowledge_service
 
 logger = logging.getLogger(__name__)
 
@@ -43,22 +44,30 @@ class AIService:
         Получает ответ от ИИ на основе сообщения пользователя и истории диалога
         """
         try:
+            # Сначала проверяем базу знаний
+            knowledge_response = knowledge_service.search_knowledge(user_message)
+            
             # Формируем сообщения для API
             messages = [{"role": "system", "content": SYSTEM_PROMPT}]
             
-            # Добавляем историю диалога, если есть
-            if chat_history:
-                messages.extend(chat_history[-6:])
-            
-            # Добавляем текущее сообщение пользователя
-            messages.append({"role": "user", "content": user_message})
+            # Добавляем информацию из базы знаний если есть
+            if knowledge_response:
+                knowledge_context = f"ИНФОРМАЦИЯ ИЗ БАЗЫ ЗНАНИЙ:\n{knowledge_response}\n\nИспользуй эту информацию для точного ответа на вопрос пользователя: {user_message}"
+                messages.append({"role": "user", "content": knowledge_context})
+            else:
+                # Добавляем историю диалога, если есть
+                if chat_history:
+                    messages.extend(chat_history[-6:])
+                
+                # Добавляем текущее сообщение пользователя
+                messages.append({"role": "user", "content": user_message})
             
             # Отправляем запрос к API
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 max_tokens=1500,
-                temperature=0.7
+                temperature=0.4
             )
             
             # Очищаем ответ от разметки
@@ -84,7 +93,7 @@ class AIService:
                 model=self.model,
                 messages=messages,
                 max_tokens=500,
-                temperature=0.3  # Низкая температура для более предсказуемых результатов
+                temperature=0.3
             )
             
             return response.choices[0].message.content

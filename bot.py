@@ -9,8 +9,8 @@ from datetime import datetime
 
 from settings.config import Config
 from settings.texts import (
-    SERVICE_BTN_TXT, ABOUT_BTN_TXT, CONSULTATION_BTN_TXT,
-    BACK_BTN_TXT, WELCOME_TEXT, SERVICES_TEXT, ABOUT_TEXT,
+    SERVICE_BTN_TXT, ABOUT_BTN_TXT, PRICE_BTN_TXT, FAQ_BTN_TXT, CONSULTATION_BTN_TXT,
+    BACK_BTN_TXT, WELCOME_TEXT,
     CONSULTATION_TEXT, BACK_TEXT, CONTACT_RECEIVED_TEXT,
     CONTACT_NOTIFICATION_TEMPLATE, ADMIN_ONLY_TEXT, STATS_TEXT,
     NO_CONTACTS_TEXT, EXPORT_SUCCESS_TEXT, EXPORT_ERROR_TEXT,
@@ -24,6 +24,8 @@ from services.notification_service import NotificationService
 from services.contact_manager import ContactManager
 from utils.ai_contact_parser import ai_contact_parser
 from utils.text_utils import split_long_message, truncate_text
+
+from services.knowledge_service import knowledge_service
 
 # Инициализируем сервисы
 contact_manager = ContactManager()
@@ -142,27 +144,63 @@ async def cmd_contact_help(message: types.Message):
     except Exception as e:
         logger.error(f"Ошибка в команде contact_help: {e}")
 
-# Обработчики кнопок
+# Команда /prices
+@dp.message(Command("prices"))
+@dp.message(F.text == PRICE_BTN_TXT)
+async def cmd_prices(message: types.Message):
+    """Показывает информацию о ценах"""
+    try:
+        prices_info = knowledge_service.get_prices_info()
+        await safe_send_message(message.chat.id, prices_info, reply_markup=Keyboards.get_main_keyboard())
+    except Exception as e:
+        logger.error(f"Ошибка в команде prices: {e}")
+        await message.answer(ERROR_TEXT, reply_markup=Keyboards.get_main_keyboard())
+
+# Команда /services
+@dp.message(Command("services"))
 @dp.message(F.text == SERVICE_BTN_TXT)
-async def handle_services(message: types.Message):
+async def cmd_services(message: types.Message):
+    """Показывает информацию об услугах компании"""
     try:
-        asyncio.create_task(send_typing_action(message.chat.id, 3))
-        response = await ai_service.get_ai_response("Расскажи подробно о комплексной системе автоматизации продаж (КСАПр) - что входит, какие результаты")
-        await safe_send_message(message.chat.id, response, reply_markup=Keyboards.get_main_keyboard())
+        services_info = knowledge_service.get_service_details("all")
+        await safe_send_message(message.chat.id, services_info, reply_markup=Keyboards.get_main_keyboard())
     except Exception as e:
-        logger.error(f"Ошибка в обработчике услуг: {e}")
+        logger.error(f"Ошибка в команде services: {e}")
         await message.answer(ERROR_TEXT, reply_markup=Keyboards.get_main_keyboard())
 
+# Команда /faq
+@dp.message(Command("faq"))
+@dp.message(F.text == FAQ_BTN_TXT)
+async def cmd_faq(message: types.Message):
+    """Показывает частые вопросы"""
+    try:
+        faq_list = knowledge_service.faq.get('frequently_asked_questions', [])
+        faq_text = "❓ ЧАСТО ЗАДАВАЕМЫЕ ВОПРОСЫ:\n\n"
+        
+        for i, item in enumerate(faq_list[:10], 1):  # Показываем первые 10 вопросов
+            faq_text += f"{i}. {item['question']}\n"
+            faq_text += f"   💡 {item['answer']}\n\n"
+        
+        faq_text += "Задайте свой вопрос, и я с радостью на него отвечу!"
+        
+        await safe_send_message(message.chat.id, faq_text, reply_markup=Keyboards.get_main_keyboard())
+    except Exception as e:
+        logger.error(f"Ошибка в команде faq: {e}")
+        await message.answer(ERROR_TEXT, reply_markup=Keyboards.get_main_keyboard())
+
+# Команда /company
+@dp.message(Command("company"))
 @dp.message(F.text == ABOUT_BTN_TXT)
-async def handle_about(message: types.Message):
+async def cmd_company(message: types.Message):
+    """Показывает информацию о компании"""
     try:
-        asyncio.create_task(send_typing_action(message.chat.id, 3))
-        response = await ai_service.get_ai_response("Расскажи о компании RD-Studio: опыт, специализация, философия, почему выбирают именно вас")
-        await safe_send_message(message.chat.id, response, reply_markup=Keyboards.get_main_keyboard())
+        company_info = knowledge_service.get_company_info()
+        await safe_send_message(message.chat.id, company_info, reply_markup=Keyboards.get_main_keyboard())
     except Exception as e:
-        logger.error(f"Ошибка в обработчике о консультанте: {e}")
+        logger.error(f"Ошибка в команде company: {e}")
         await message.answer(ERROR_TEXT, reply_markup=Keyboards.get_main_keyboard())
 
+# Обработчики кнопок
 # ОБНОВЛЕННЫЙ ОБРАБОТЧИК - теперь сразу запрашивает контакт
 @dp.message(F.text == CONSULTATION_BTN_TXT)
 async def handle_consultation_request(message: types.Message):
@@ -218,19 +256,10 @@ async def handle_consultation_keywords(message: types.Message):
         
         response = """🎯 Отлично, что хотите получить консультацию!
 
-🚀 *Самый быстрый и точный способ:* 
-Нажмите кнопку «📅 Запись на консультацию» в основном меню
-
-💡 *Почему это лучший способ:*
-• Автоматически передает ваш номер телефона
-• Сохраняет имя из Telegram профиля
-• Исключает ошибки при распознавании
-• Занимает всего 10 секунд
+🚀 Нажмите кнопку «📅 Запись на консультацию» в основном меню
 
 📅 Консультация бесплатная (30-60 минут)
-👨‍💼 Специалист свяжется в течение 2 часов
-
-Используйте кнопку для максимально точной записи!"""
+👨‍💼 Специалист свяжется в течение 2 часов"""
         
         await safe_send_message(message.chat.id, response, reply_markup=Keyboards.get_main_keyboard())
         return True

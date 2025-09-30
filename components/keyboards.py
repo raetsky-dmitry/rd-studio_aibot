@@ -4,7 +4,7 @@
 from aiogram import types
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from settings.texts import (
-    SERVICE_BTN_TXT, ABOUT_BTN_TXT, CONSULTATION_BTN_TXT,
+    SERVICE_BTN_TXT, ABOUT_BTN_TXT, PRICE_BTN_TXT, FAQ_BTN_TXT, CONSULTATION_BTN_TXT,
     BACK_BTN_TXT, CONTACT_BTN_TXT
 )
 
@@ -18,7 +18,9 @@ class Keyboards:
         builder.add(
             types.KeyboardButton(text=CONSULTATION_BTN_TXT),  # Консультация на отдельной строке
             types.KeyboardButton(text=SERVICE_BTN_TXT),
-            types.KeyboardButton(text=ABOUT_BTN_TXT)
+            types.KeyboardButton(text=PRICE_BTN_TXT),
+            types.KeyboardButton(text=ABOUT_BTN_TXT),
+            types.KeyboardButton(text=FAQ_BTN_TXT)
         )
         builder.adjust(1, 2)  # Консультация отдельно, остальные по 2 в ряду
         return builder.as_markup(resize_keyboard=True)
