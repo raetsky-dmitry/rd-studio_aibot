@@ -4,8 +4,8 @@
 from aiogram import types
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from settings.texts import (
-    SERVICE_BTN_TXT, ABOUT_BTN_TXT, CONSULTATION_BTN_TXT, 
-    QUESTION_BTN_TXT, CONTACT_BTN_TXT, BACK_BTN_TXT
+    SERVICE_BTN_TXT, ABOUT_BTN_TXT, CONSULTATION_BTN_TXT,
+    BACK_BTN_TXT, CONTACT_BTN_TXT
 )
 
 class Keyboards:
@@ -13,15 +13,14 @@ class Keyboards:
     
     @staticmethod
     def get_main_keyboard():
-        """Основная клавиатура с главным меню"""
+        """Основная клавиатура - убрали кнопку "Задать вопрос" """
         builder = ReplyKeyboardBuilder()
         builder.add(
+            types.KeyboardButton(text=CONSULTATION_BTN_TXT),  # Консультация на отдельной строке
             types.KeyboardButton(text=SERVICE_BTN_TXT),
-            types.KeyboardButton(text=ABOUT_BTN_TXT),
-            types.KeyboardButton(text=CONSULTATION_BTN_TXT),
-            types.KeyboardButton(text=QUESTION_BTN_TXT)
+            types.KeyboardButton(text=ABOUT_BTN_TXT)
         )
-        builder.adjust(2)  # 2 кнопки в ряду
+        builder.adjust(1, 2)  # Консультация отдельно, остальные по 2 в ряду
         return builder.as_markup(resize_keyboard=True)
     
     @staticmethod

@@ -9,8 +9,8 @@ from datetime import datetime
 
 from settings.config import Config
 from settings.texts import (
-    SERVICE_BTN_TXT, ABOUT_BTN_TXT, CONSULTATION_BTN_TXT, QUESTION_BTN_TXT,
-    BACK_BTN_TXT, WELCOME_TEXT, SERVICES_TEXT, ABOUT_TEXT, QUESTION_TEXT,
+    SERVICE_BTN_TXT, ABOUT_BTN_TXT, CONSULTATION_BTN_TXT,
+    BACK_BTN_TXT, WELCOME_TEXT, SERVICES_TEXT, ABOUT_TEXT,
     CONSULTATION_TEXT, BACK_TEXT, CONTACT_RECEIVED_TEXT,
     CONTACT_NOTIFICATION_TEMPLATE, ADMIN_ONLY_TEXT, STATS_TEXT,
     NO_CONTACTS_TEXT, EXPORT_SUCCESS_TEXT, EXPORT_ERROR_TEXT,
@@ -147,7 +147,7 @@ async def cmd_contact_help(message: types.Message):
 async def handle_services(message: types.Message):
     try:
         asyncio.create_task(send_typing_action(message.chat.id, 3))
-        response = await ai_service.get_ai_response("Расскажи подробно о твоих услугах")
+        response = await ai_service.get_ai_response("Расскажи подробно о комплексной системе автоматизации продаж (КСАПр) - что входит, какие результаты")
         await safe_send_message(message.chat.id, response, reply_markup=Keyboards.get_main_keyboard())
     except Exception as e:
         logger.error(f"Ошибка в обработчике услуг: {e}")
@@ -157,19 +157,13 @@ async def handle_services(message: types.Message):
 async def handle_about(message: types.Message):
     try:
         asyncio.create_task(send_typing_action(message.chat.id, 3))
-        response = await ai_service.get_ai_response("Расскажи о консультанте: его опыт, специализация")
+        response = await ai_service.get_ai_response("Расскажи о компании RD-Studio: опыт, специализация, философия, почему выбирают именно вас")
         await safe_send_message(message.chat.id, response, reply_markup=Keyboards.get_main_keyboard())
     except Exception as e:
         logger.error(f"Ошибка в обработчике о консультанте: {e}")
         await message.answer(ERROR_TEXT, reply_markup=Keyboards.get_main_keyboard())
 
-@dp.message(F.text == QUESTION_BTN_TXT)
-async def handle_question(message: types.Message):
-    try:
-        await safe_send_message(message.chat.id, QUESTION_TEXT, reply_markup=Keyboards.get_main_keyboard())
-    except Exception as e:
-        logger.error(f"Ошибка в обработчике вопроса: {e}")
-
+# ОБНОВЛЕННЫЙ ОБРАБОТЧИК - теперь сразу запрашивает контакт
 @dp.message(F.text == CONSULTATION_BTN_TXT)
 async def handle_consultation_request(message: types.Message):
     try:
@@ -208,9 +202,48 @@ async def handle_contact(message: types.Message):
     except Exception as e:
         logger.error(f"Ошибка в обработчике контактов: {e}")
 
-# Обработчик текстовых сообщений с ИИ-распознаванием контактов
+# Обработчик ключевых слов для консультации
+@dp.message(F.text.contains("консультаци") | F.text.contains("запис") | F.text.contains("свяжит"))
+async def handle_consultation_keywords(message: types.Message):
+    """Обработчик ключевых слов, связанных с консультацией"""
+    user_message_lower = message.text.lower()
+    
+    # Проверяем, содержит ли сообщение ключевые слова о консультации
+    consultation_keywords = ['консультаци', 'запис', 'свяжит', 'позвони', 'перезвони']
+    has_consultation_intent = any(keyword in user_message_lower for keyword in consultation_keywords)
+    
+    if has_consultation_intent:
+        # Показываем индикатор набора
+        asyncio.create_task(send_typing_action(message.chat.id, 2))
+        
+        response = """🎯 Отлично, что хотите получить консультацию!
+
+🚀 *Самый быстрый и точный способ:* 
+Нажмите кнопку «📅 Запись на консультацию» в основном меню
+
+💡 *Почему это лучший способ:*
+• Автоматически передает ваш номер телефона
+• Сохраняет имя из Telegram профиля
+• Исключает ошибки при распознавании
+• Занимает всего 10 секунд
+
+📅 Консультация бесплатная (30-60 минут)
+👨‍💼 Специалист свяжется в течение 2 часов
+
+Используйте кнопку для максимально точной записи!"""
+        
+        await safe_send_message(message.chat.id, response, reply_markup=Keyboards.get_main_keyboard())
+        return True
+    
+    return False
+
+# Обработчик всех остальных текстовых сообщений с ИИ-распознаванием контактов
 @dp.message(F.text)
 async def handle_text(message: types.Message):
+    # Сначала проверяем, не обработано ли сообщение как намерение консультации
+    if await handle_consultation_keywords(message):
+        return
+    
     user_id = message.from_user.id
     user_message = message.text
     
@@ -277,7 +310,7 @@ async def handle_text(message: types.Message):
 
 # Обновляем функцию main для инициализации сервисов
 async def main():
-    logger.info("Запускаем бота с улучшенной обработкой ошибок...")
+    logger.info("Запускаем бота с упрощенным процессом записи...")
     
     global notification_service
     notification_service = NotificationService(bot)
